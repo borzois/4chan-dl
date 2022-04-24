@@ -47,11 +47,12 @@ def main():
 							file.write(img_get.content)
 						dl_count += 1
 				else:
+					# skips images that have already been downloaded
 					print('Skipping post', post_id, '-', img_name)
 					skip_count += 1
 	
 	if dl_count != 0:
-		print("Downloaded", dl_count, "images to", dl_dir, "\n Skipped", skip_count, "images")
+		print("Downloaded", dl_count, "images to", dl_dir, "\nSkipped", skip_count, "images")
 	else:
 		print("Nothing to download")
 
