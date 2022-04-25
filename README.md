@@ -1,7 +1,7 @@
 # 4chan-dl
 
 ## Dependencies
-- BeautifulSoup4
+- beautifulsoup4
 - requests
 ```
 pip install beautifulsoup4 requests
