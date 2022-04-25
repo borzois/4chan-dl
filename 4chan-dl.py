@@ -65,7 +65,7 @@ class FourchanDL:
 		img_name = self._format
 		img_name = img_name.replace("%filename", post.find(class_="fileText").a.text.replace(extension, ''))
 		img_name = img_name.replace("%id", post.get('id')[2:])
-		img_name = img_name.replace("%count", str(self._dl_count+1))
+		img_name = img_name.replace("%count", str(self._dl_count + self._skip_count + 1))
 		if "%name" in img_name:
 			try:
 				img_name = img_name.replace("%name", self._name)
