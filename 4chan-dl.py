@@ -38,7 +38,6 @@ class FourchanDL:
 		op = self._soup.find(class_='opContainer')
 		dl_subdir = dl_subdir.replace("%opid", op.get('id')[2:])
 		dl_subdir = dl_subdir.replace("%opname", op.find(class_="subject").text.replace('/', ' '))
-		print(dl_subdir)
 
 		# download directory is chosen based on the following order of priorities
 		if self._args.directory is not None:
@@ -54,7 +53,7 @@ class FourchanDL:
 			# 3. current directory (where the script is being run from)
 			dl_dir = dl_subdir
 		os.makedirs(dl_dir, exist_ok=True)
-		print(dl_dir)
+		print("Downloading to", dl_dir)
 		return dl_dir
 
 	def get_format(self):
