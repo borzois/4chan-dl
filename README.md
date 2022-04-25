@@ -17,6 +17,7 @@ python3 ./4chan-dl.py [-h] [-d DIRECTORY] [-f FORMAT] [-n NAME] [-q]
 
 ## Format
 The ```-f``` parameter uses basic string substitution with the % special character
+
 The following variables are supported:
 ```
 %filename  - the image's filename (as uploaded by the poster) 
