@@ -12,6 +12,7 @@ import json
 
 class FourchanDL:
 	def __init__(self, args, config):
+		self._args = args
 		self._url = args.url
 		self._soup = self.prepare_soup()
 		self._dl_count = 0
@@ -79,10 +80,12 @@ class FourchanDL:
 				download_successful = self.download_post(post)
 
 				if download_successful:
-					print('Downloaded post', post.get('id')[2:], '-', self.get_img_name(post))
+					if not self._args.quiet:
+						print('Downloaded post', post.get('id')[2:], '-', self.get_img_name(post))
 					self._dl_count += 1
 				else:
-					print('Skipped post', post.get('id')[2:], '-', self.get_img_name(post))
+					if not self._args.quiet:
+						print('Skipped post', post.get('id')[2:], '-', self.get_img_name(post))
 					self._skip_count += 1
 
 	def download_post(self, post):
@@ -131,8 +134,9 @@ def get_args():
 	parser.add_argument("-d", "--directory", type=str, help="Directory to save images to")
 	parser.add_argument("-f", "--format", type=str, help="File naming")
 	parser.add_argument("-n", "--name", type=str, help="Set the %name variable")
-	parser.add_argument("--set-default-format", action=argparse.BooleanOptionalAction, help="Set the current directory format as default")
+	parser.add_argument("-q", "--quiet", action=argparse.BooleanOptionalAction, help="Less verbose")
 	parser.add_argument("--set-default-directory", action=argparse.BooleanOptionalAction, help="Set the current directory argument as default")
+	parser.add_argument("--set-default-format", action=argparse.BooleanOptionalAction, help="Set the current directory format as default")
 	parser.add_argument("url", type=str, help="Thread URL")
 
 	return parser.parse_args()
