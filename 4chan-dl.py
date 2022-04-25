@@ -6,19 +6,31 @@ import os
 import sys
 import requests
 import argparse
+import json
 
 # whatever im gonna make it a 4chan scraper now
 
 class FourchanDL:
-	def __init__(self, args):
+	def __init__(self, args, config):
 		self._url = args.url
 		self._soup = self.prepare_soup()
-		self._dl_dir = self._url.split('/')[-1]
 		self._dl_count = 0
 		self._skip_count = 0
 
+		dl_subdir = self._url.split('/')[-1]
+		# download directory is chosen based on the following order of priorities
 		if args.directory is not None:
-			self._dl_dir = os.path.join(args.directory, self._dl_dir)
+			# 1. -d argument
+			self._dl_dir = os.path.join(args.directory, dl_subdir)
+			if args.set_default is True:
+				config['default_path'] = args.directory
+
+		elif config['default_path'] is not None:
+			# 2. default directory
+			self._dl_dir = os.path.join(config['default_path'], dl_subdir)
+		else:
+			# 3. current directory (where the script is being run from)
+			self._dl_dir = dl_subdir
 		os.makedirs(self._dl_dir, exist_ok=True)
 
 	def prepare_soup(self):
@@ -66,17 +78,36 @@ class FourchanDL:
 			print("Nothing to download\nSkipped", self._skip_count, "images")
 
 
+def load_config():
+	config_path = os.path.expanduser("~/.config/4chan-dl/config.json")
+	config = {}
+	if os.path.isfile(config_path):
+		with open(config_path, 'r') as file:
+			config = json.load(file)
+	return config
+
+def export_config(config):
+	config_path = os.path.expanduser("~/.config/4chan-dl/config.json")
+	with open(config_path, 'w') as file:
+		json.dump(config, file)
+
 def main():
 	parser = argparse.ArgumentParser(description="4chan image downloader")
 	parser.add_argument("-d", "--directory", type=str, help="Directory to save images to")
+	parser.add_argument("--set-default", action=argparse.BooleanOptionalAction, help="Set the current directory argument as default")
 	parser.add_argument("url", type=str, help="Thread URL")
 
 	args = parser.parse_args()
+	config = load_config()
+	if config == {}:
+		print("No config file found")
 
-	dl = FourchanDL(args)
+	dl = FourchanDL(args, config)
 
 	dl.run()	
 	dl.print_stats()
+
+	export_config(config)
 	
 if __name__ == "__main__":
 	main()
