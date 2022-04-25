@@ -19,18 +19,23 @@ class FourchanDL:
 		self._dl_count = 0
 		self._skip_count = 0
 		self._name = args.name
-		self._dl_dir = self.get_directory()
 		self._format = self.get_format()
+		self._dl_dir = self.get_directory()
 
 	def prepare_soup(self):
 		html_get = requests.get(self._url)
 		if not html_get.ok:
-			print("Invalid url")
-			return
+			sys.exit("Invalid url")
 		return BeautifulSoup(html_get.text, 'html.parser')
 
 	def get_directory(self):
-		dl_subdir = self._url.split('/')[-1]
+		dl_subdir = '/'.join(self._format.split('/')[:-1])
+		if "%name" in dl_subdir:
+			try:
+				dl_subdir = dl_subdir.replace("%name", self._name)
+			except TypeError:
+				sys.exit("Name must be set (use -n)")
+		print(dl_subdir)
 		# download directory is chosen based on the following order of priorities
 		if self._args.directory is not None:
 			# 1. -d argument
@@ -45,6 +50,7 @@ class FourchanDL:
 			# 3. current directory (where the script is being run from)
 			dl_dir = dl_subdir
 		os.makedirs(dl_dir, exist_ok=True)
+		print(dl_dir)
 		return dl_dir
 
 	def get_format(self):
@@ -60,9 +66,10 @@ class FourchanDL:
 			form = self._config['format']
 		return form
 
+
 	def get_img_name(self, post):
 		extension = "." + post.find(class_="fileText").a.text.split('.')[-1]
-		img_name = self._format
+		img_name = self._format.split('/')[-1]
 		img_name = img_name.replace("%filename", post.find(class_="fileText").a.text.replace(extension, ''))
 		img_name = img_name.replace("%id", post.get('id')[2:])
 		img_name = img_name.replace("%count", str(self._dl_count + self._skip_count + 1))
@@ -82,7 +89,7 @@ class FourchanDL:
 
 				if download_successful:
 					if not self._args.quiet:
-						print('Downloaded post', post.get('id')[2:], '-', self.get_img_name(post))
+						print('Downloaded post', post.get('id')[2:], 'as', self.get_img_name(post))
 					self._dl_count += 1
 				else:
 					if not self._args.quiet:
