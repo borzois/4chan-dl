@@ -13,13 +13,14 @@ import json
 class FourchanDL:
 	def __init__(self, args, config):
 		self._args = args
+		self._config = config
 		self._url = args.url
 		self._soup = self.prepare_soup()
 		self._dl_count = 0
 		self._skip_count = 0
 		self._name = args.name
-		self._dl_dir = self.get_directory(args, config)
-		self._format = self.get_format(args, config)
+		self._dl_dir = self.get_directory()
+		self._format = self.get_format()
 
 	def prepare_soup(self):
 		html_get = requests.get(self._url)
@@ -28,35 +29,35 @@ class FourchanDL:
 			return
 		return BeautifulSoup(html_get.text, 'html.parser')
 
-	def get_directory(self, args, config):
+	def get_directory(self):
 		dl_subdir = self._url.split('/')[-1]
 		# download directory is chosen based on the following order of priorities
-		if args.directory is not None:
+		if self._args.directory is not None:
 			# 1. -d argument
-			dl_dir = os.path.join(args.directory, dl_subdir)
-			if args.set_default_directory is True:
-				config['path'] = args.directory
-				print("Set", args.directory, "as default download directory")
-		elif config['path'] is not None:
+			dl_dir = os.path.join(self._args.directory, dl_subdir)
+			if self._args.set_default_directory is True:
+				self._config['path'] = self._args.directory
+				print("Set", self._args.directory, "as default download directory")
+		elif self._config['path'] is not None:
 			# 2. default directory
-			dl_dir = os.path.join(config['path'], dl_subdir)
+			dl_dir = os.path.join(self._config['path'], dl_subdir)
 		else:
 			# 3. current directory (where the script is being run from)
 			dl_dir = dl_subdir
 		os.makedirs(dl_dir, exist_ok=True)
 		return dl_dir
 
-	def get_format(self, args, config):
+	def get_format(self):
 		# format is chosen based on the following order of priorities
-		if args.format is not None:
+		if self._args.format is not None:
 			# 1. -f argument
-			form = args.format
-			if args.set_default_format is True:
-				config['format'] = args.format
-				print("Set", args.format, "as default format")
+			form = self._args.format
+			if self._args.set_default_format is True:
+				self._config['format'] = self._args.format
+				print("Set", self._args.format, "as default format")
 		else:
 			# 2. default directory
-			form = config['format']
+			form = self._config['format']
 		return form
 
 	def get_img_name(self, post):
