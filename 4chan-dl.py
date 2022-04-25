@@ -3,6 +3,7 @@
 from bs4 import BeautifulSoup
 import os.path
 import os
+import sys
 import requests
 import argparse
 import json
@@ -15,7 +16,9 @@ class FourchanDL:
 		self._soup = self.prepare_soup()
 		self._dl_count = 0
 		self._skip_count = 0
+		self._name = args.name
 		self._dl_dir = self.get_directory(args, config)
+		self._format = self.get_format(args, config)
 
 	def prepare_soup(self):
 		html_get = requests.get(self._url)
@@ -30,17 +33,45 @@ class FourchanDL:
 		if args.directory is not None:
 			# 1. -d argument
 			dl_dir = os.path.join(args.directory, dl_subdir)
-			if args.set_default is True:
-				config['default_path'] = args.directory
+			if args.set_default_directory is True:
+				config['path'] = args.directory
 				print("Set", args.directory, "as default download directory")
-		elif config['default_path'] is not None:
+		elif config['path'] is not None:
 			# 2. default directory
-			dl_dir = os.path.join(config['default_path'], dl_subdir)
+			dl_dir = os.path.join(config['path'], dl_subdir)
 		else:
 			# 3. current directory (where the script is being run from)
 			dl_dir = dl_subdir
 		os.makedirs(dl_dir, exist_ok=True)
 		return dl_dir
+
+	def get_format(self, args, config):
+		# format is chosen based on the following order of priorities
+		if args.format is not None:
+			# 1. -f argument
+			form = args.format
+			if args.set_default_format is True:
+				config['format'] = args.format
+				print("Set", args.format, "as default format")
+		else:
+			# 2. default directory
+			form = config['format']
+		return form
+
+	def get_img_name(self, post):
+		extension = "." + post.find(class_="fileText").a.text.split('.')[-1]
+		img_name = self._format
+		img_name = img_name.replace("%filename", post.find(class_="fileText").a.text.replace(extension, ''))
+		img_name = img_name.replace("%id", post.get('id')[2:])
+		img_name = img_name.replace("%count", str(self._dl_count+1))
+		if "%name" in img_name:
+			try:
+				img_name = img_name.replace("%name", self._name)
+			except TypeError:
+				sys.exit("Name must be set (use -n)")
+		
+		img_name = img_name + extension
+		return img_name
 
 	def run(self):
 		for post in self._soup.find_all(class_='postContainer'):
@@ -48,14 +79,14 @@ class FourchanDL:
 				download_successful = self.download_post(post)
 
 				if download_successful:
-					print('Downloaded post', post.get('id')[2:], '-', post.find(class_="fileText").a.text)
+					print('Downloaded post', post.get('id')[2:], '-', self.get_img_name(post))
 					self._dl_count += 1
 				else:
-					print('Skipped post', post.get('id')[2:], '-', post.find(class_="fileText").a.text)
+					print('Skipped post', post.get('id')[2:], '-', self.get_img_name(post))
 					self._skip_count += 1
 
 	def download_post(self, post):
-		img_name = post.find(class_="fileText").a.text
+		img_name = self.get_img_name(post)
 		img_link = "http:" + post.find(class_="fileThumb").get('href')
 
 		# archived posts will have a gif that messes everything up
@@ -95,16 +126,22 @@ def export_config(config):
 	with open(config_path, 'w') as file:
 		json.dump(config, file)
 
-def main():
+def get_args():
 	parser = argparse.ArgumentParser(description="4chan image downloader")
 	parser.add_argument("-d", "--directory", type=str, help="Directory to save images to")
-	parser.add_argument("--set-default", action=argparse.BooleanOptionalAction, help="Set the current directory argument as default")
+	parser.add_argument("-f", "--format", type=str, help="File naming")
+	parser.add_argument("-n", "--name", type=str, help="Set the %name variable")
+	parser.add_argument("--set-default-format", action=argparse.BooleanOptionalAction, help="Set the current directory format as default")
+	parser.add_argument("--set-default-directory", action=argparse.BooleanOptionalAction, help="Set the current directory argument as default")
 	parser.add_argument("url", type=str, help="Thread URL")
 
-	args = parser.parse_args()
+	return parser.parse_args()
 
+def main():
+	args = get_args()
 	default_config = {
-		"default_path": None
+		"path": None,
+		"format": "%filename"
 	}
 
 	config = load_config()
