@@ -15,12 +15,19 @@ python3 ./4chan-dl.py [-h] [-d DIRECTORY] [-f FORMAT] [-n NAME] [-q]
                    url
 ```
 
-### Formatting examples
+## Format
 The ```-f``` parameter uses basic string substitution with the % special character
-
+The following variables are supported:
+```
+%filename  - the image's filename (as uploaded by the poster) 
+%id        - the id of the post
+%count     - incremented on each image in the thread
+%name      - user defined variable, set using -n (useful when quickly downloading threads)
+```
+### Formatting examples
 #### Creating a default format
 ```
-4chan-dl.py -f "%name/%name_%count" -n "test" --set-default-format -d /4chan/ --set-default-directorys
+4chan-dl.py -f "%name/%name_%count" -n "test" --set-default-format -d /4chan/ --set-default-directory
 ```
 Once the default format is set you can simply use
 ```
@@ -37,5 +44,5 @@ on subsequent executions, which will create the following file structure:
 #### Other examples
 ```
 4chan-dl.py -f "%filename(%id)" 
-4chan-dl.py -f "4chan_%id" 
+4chan-dl.py -f "post_%id" 
 ```
