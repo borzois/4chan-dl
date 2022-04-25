@@ -23,6 +23,8 @@ The following variables are supported:
 %id        - the id of the post
 %count     - incremented on each image in the thread
 %name      - user defined variable, set using -n (useful when quickly downloading threads)
+%opid      - the id of the thread
+%opname    - the name of the thread (empty char if none)
 ```
 ### Formatting examples
 #### Creating a default format
