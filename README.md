@@ -20,13 +20,19 @@ The ```-f``` parameter uses basic string substitution with the % special charact
 
 #### Creating a default format
 ```
-4chan-dl.py -f "%name_%count" -n "test" --set-default-format
+4chan-dl.py -f "%name/%name_%count" -n "test" --set-default-format -d /4chan/ --set-default-directorys
 ```
-Once the default format is set you can simply use:
+Once the default format is set you can simply use
 ```
-4chan-dl.py -n "newname"
+4chan-dl.py -n "newthread"
 ```
-on subsequent executions
+on subsequent executions, which will create the following file structure:
+```
+4chan/
+|-newthread/
+	|-newthread_1.png
+	|-...
+```
 
 #### Other examples
 ```
