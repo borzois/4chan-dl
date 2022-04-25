@@ -35,7 +35,11 @@ class FourchanDL:
 				dl_subdir = dl_subdir.replace("%name", self._name)
 			except TypeError:
 				sys.exit("Name must be set (use -n)")
+		op = self._soup.find(class_='opContainer')
+		dl_subdir = dl_subdir.replace("%opid", op.get('id')[2:])
+		dl_subdir = dl_subdir.replace("%opname", op.find(class_="subject").text.replace('/', ' '))
 		print(dl_subdir)
+
 		# download directory is chosen based on the following order of priorities
 		if self._args.directory is not None:
 			# 1. -d argument
@@ -66,13 +70,15 @@ class FourchanDL:
 			form = self._config['format']
 		return form
 
-
 	def get_img_name(self, post):
 		extension = "." + post.find(class_="fileText").a.text.split('.')[-1]
 		img_name = self._format.split('/')[-1]
 		img_name = img_name.replace("%filename", post.find(class_="fileText").a.text.replace(extension, ''))
 		img_name = img_name.replace("%id", post.get('id')[2:])
 		img_name = img_name.replace("%count", str(self._dl_count + self._skip_count + 1))
+		op = self._soup.find(class_='opContainer')
+		img_name = img_name.replace("%opid", op.get('id')[2:])
+		img_name = img_name.replace("%opname", op.find(class_="subject").text.replace('/', ' '))
 		if "%name" in img_name:
 			try:
 				img_name = img_name.replace("%name", self._name)
