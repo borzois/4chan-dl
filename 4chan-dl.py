@@ -1,23 +1,25 @@
 #!/usr/bin/python
 
 from bs4 import BeautifulSoup
-import requests
+import os.path
 import os
-from os.path import exists
-import re
 import sys
+import requests
+import argparse
 
 # whatever im gonna make it a 4chan scraper now
 
 class FourchanDL:
-	def __init__(self, url):
-		self._url = url
+	def __init__(self, args):
+		self._url = args.url
 		self._soup = self.prepare_soup()
-		self._dl_dir = dl_dir = self._url.split('/')[-1]
+		self._dl_dir = self._url.split('/')[-1]
 		self._dl_count = 0
 		self._skip_count = 0
 
-		os.makedirs(dl_dir, exist_ok=True)
+		if args.directory is not None:
+			self._dl_dir = os.path.join(args.directory, self._dl_dir)
+		os.makedirs(self._dl_dir, exist_ok=True)
 
 	def prepare_soup(self):
 		html_get = requests.get(self._url)
@@ -47,8 +49,8 @@ class FourchanDL:
 			return False
 
 		# download:
-		file_location = self._dl_dir + "/" + img_name
-		if not exists(file_location):
+		file_location = os.path.join(self._dl_dir, img_name)
+		if not os.path.exists(file_location):
 			img_get = requests.get(img_link)
 			if img_get.ok:
 				with open(file_location, 'wb') as file:
@@ -61,15 +63,17 @@ class FourchanDL:
 		if self._dl_count != 0:
 			print("Downloaded", self._dl_count, "images to", self._dl_dir, "\nSkipped", self._skip_count, "images")
 		else:
-			print("Nothing to download")
+			print("Nothing to download\nSkipped", self._skip_count, "images")
+
 
 def main():
-	if len(sys.argv) == 1:
-		url = input("Thread: ")
-	else:
-		url = sys.argv[1]
-	
-	dl = FourchanDL(url)
+	parser = argparse.ArgumentParser(description="4chan image downloader")
+	parser.add_argument("-d", "--directory", type=str, help="Directory to save images to")
+	parser.add_argument("url", type=str, help="Thread URL")
+
+	args = parser.parse_args()
+
+	dl = FourchanDL(args)
 
 	dl.run()	
 	dl.print_stats()

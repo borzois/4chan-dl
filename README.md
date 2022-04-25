@@ -2,10 +2,5 @@
 
 ## Usage
 ```
-python3 ./4chan-dl [url]
-```
-
-or just 
-```
-python3 ./4chan-dl
+python3 ./4chan-dl.py [-h] [-d DIRECTORY] url
 ```
