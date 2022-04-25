@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+from asyncio import sleep
 from bs4 import BeautifulSoup
 import os.path
 import os
@@ -7,6 +8,7 @@ import sys
 import requests
 import argparse
 import json
+import time
 
 # whatever im gonna make it a 4chan scraper now
 
@@ -53,7 +55,8 @@ class FourchanDL:
 			# 3. current directory (where the script is being run from)
 			dl_dir = dl_subdir
 		os.makedirs(dl_dir, exist_ok=True)
-		print("Downloading to", dl_dir)
+		if not self._args.quiet:
+			print("Downloading to", dl_dir)
 		return dl_dir
 
 	def get_format(self):
@@ -123,9 +126,8 @@ class FourchanDL:
 	def print_stats(self):
 		if self._dl_count != 0:
 			print("Downloaded", self._dl_count, "images to", self._dl_dir, "\nSkipped", self._skip_count, "images")
-		else:
+		elif not self._args.quiet:
 			print("Nothing to download\nSkipped", self._skip_count, "images")
-
 
 def load_config():
 	config_path = os.path.expanduser("~/.config/4chan-dl/config.json")
@@ -148,6 +150,7 @@ def get_args():
 	parser.add_argument("-f", "--format", type=str, help="File naming")
 	parser.add_argument("-n", "--name", type=str, help="Set the %name variable")
 	parser.add_argument("-q", "--quiet", action=argparse.BooleanOptionalAction, help="Less verbose")
+	parser.add_argument("-w", "--watch", type=int, default=0, help="Time between retries. 0 will run the program once")
 	parser.add_argument("--set-default-directory", action=argparse.BooleanOptionalAction, help="Set the current directory argument as default")
 	parser.add_argument("--set-default-format", action=argparse.BooleanOptionalAction, help="Set the current directory format as default")
 	parser.add_argument("url", type=str, help="Thread URL")
@@ -166,10 +169,14 @@ def main():
 		print("No config file found. Creating default config")
 		config = default_config
 
-	dl = FourchanDL(args, config)
+	while True:
+		dl = FourchanDL(args, config)
 
-	dl.run()	
-	dl.print_stats()
+		dl.run()	
+		dl.print_stats()
+		if args.watch == 0:
+			break
+		time.sleep(args.watch)
 
 	export_config(config)
 	
