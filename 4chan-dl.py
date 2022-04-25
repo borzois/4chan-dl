@@ -3,7 +3,6 @@
 from bs4 import BeautifulSoup
 import os.path
 import os
-import sys
 import requests
 import argparse
 import json
@@ -16,22 +15,7 @@ class FourchanDL:
 		self._soup = self.prepare_soup()
 		self._dl_count = 0
 		self._skip_count = 0
-
-		dl_subdir = self._url.split('/')[-1]
-		# download directory is chosen based on the following order of priorities
-		if args.directory is not None:
-			# 1. -d argument
-			self._dl_dir = os.path.join(args.directory, dl_subdir)
-			if args.set_default is True:
-				config['default_path'] = args.directory
-
-		elif config['default_path'] is not None:
-			# 2. default directory
-			self._dl_dir = os.path.join(config['default_path'], dl_subdir)
-		else:
-			# 3. current directory (where the script is being run from)
-			self._dl_dir = dl_subdir
-		os.makedirs(self._dl_dir, exist_ok=True)
+		self._dl_dir = self.get_directory(args, config)
 
 	def prepare_soup(self):
 		html_get = requests.get(self._url)
@@ -39,6 +23,24 @@ class FourchanDL:
 			print("Invalid url")
 			return
 		return BeautifulSoup(html_get.text, 'html.parser')
+
+	def get_directory(self, args, config):
+		dl_subdir = self._url.split('/')[-1]
+		# download directory is chosen based on the following order of priorities
+		if args.directory is not None:
+			# 1. -d argument
+			dl_dir = os.path.join(args.directory, dl_subdir)
+			if args.set_default is True:
+				config['default_path'] = args.directory
+				print("Set", args.directory, "as default download directory")
+		elif config['default_path'] is not None:
+			# 2. default directory
+			dl_dir = os.path.join(config['default_path'], dl_subdir)
+		else:
+			# 3. current directory (where the script is being run from)
+			dl_dir = dl_subdir
+		os.makedirs(dl_dir, exist_ok=True)
+		return dl_dir
 
 	def run(self):
 		for post in self._soup.find_all(class_='postContainer'):
@@ -88,6 +90,8 @@ def load_config():
 
 def export_config(config):
 	config_path = os.path.expanduser("~/.config/4chan-dl/config.json")
+	if not os.path.exists(os.path.expanduser("~/.config/4chan-dl/")):
+		os.makedirs(os.path.expanduser("~/.config/4chan-dl/"))
 	with open(config_path, 'w') as file:
 		json.dump(config, file)
 
@@ -98,9 +102,15 @@ def main():
 	parser.add_argument("url", type=str, help="Thread URL")
 
 	args = parser.parse_args()
+
+	default_config = {
+		"default_path": None
+	}
+
 	config = load_config()
 	if config == {}:
-		print("No config file found")
+		print("No config file found. Creating default config")
+		config = default_config
 
 	dl = FourchanDL(args, config)
 
