@@ -22,42 +22,13 @@ class FourchanDL:
         self._skip_count = 0
         self._name = args.name
         self._format = self.get_format()
-        self._dl_dir = self.get_directory()
+        # self._dl_dir = self.get_directory()
 
     def prepare_soup(self):
         html_get = requests.get(self._url)
         if not html_get.ok:
             sys.exit("Invalid url")
         return BeautifulSoup(html_get.text, 'html.parser')
-
-    def get_directory(self):
-        dl_subdir = '/'.join(self._format.split('/')[:-1])
-        if "%name" in dl_subdir:
-            try:
-                dl_subdir = dl_subdir.replace("%name", self._name)
-            except TypeError:
-                sys.exit("Name must be set (use -n)")
-        op = self._soup.find(class_='opContainer')
-        dl_subdir = dl_subdir.replace("%opid", op.get('id')[2:])
-        dl_subdir = dl_subdir.replace("%opname", op.find(class_="subject").text.replace('/', ' '))
-
-        # download directory is chosen based on the following order of priorities
-        if self._args.directory is not None:
-            # 1. -d argument
-            dl_dir = os.path.join(self._args.directory, dl_subdir)
-            if self._args.set_default_directory is True:
-                self._config['path'] = self._args.directory
-                print("Set", self._args.directory, "as default download directory")
-        elif self._config['path'] is not None:
-            # 2. default directory
-            dl_dir = os.path.join(self._config['path'], dl_subdir)
-        else:
-            # 3. current directory (where the script is being run from)
-            dl_dir = dl_subdir
-        os.makedirs(dl_dir, exist_ok=True)
-        if not self._args.quiet:
-            print("Downloading to", dl_dir)
-        return dl_dir
 
     def get_format(self):
         # format is chosen based on the following order of priorities
@@ -72,23 +43,23 @@ class FourchanDL:
             form = self._config['format']
         return form
 
-    def get_img_name(self, post):
+    def process_format(self, post):
+        # full path: path / img_name . extension
         extension = "." + post.find(class_="fileText").a.text.split('.')[-1]
-        img_name = self._format.split('/')[-1]
-        img_name = img_name.replace("%filename", post.find(class_="fileText").a.text.replace(extension, ''))
-        img_name = img_name.replace("%id", post.get('id')[2:])
-        img_name = img_name.replace("%count", str(self._dl_count + self._skip_count + 1))
+
+        path_format = self._format
+        path_format = path_format.replace("%filename", post.find(class_="fileText").a.text.replace(extension, ''))
+        path_format = path_format.replace("%id", post.get('id')[2:])
+        path_format = path_format.replace("%count", str(self._dl_count + self._skip_count + 1))
         op = self._soup.find(class_='opContainer')
-        img_name = img_name.replace("%opid", op.get('id')[2:])
-        img_name = img_name.replace("%opname", op.find(class_="subject").text.replace('/', ' '))
-        if "%name" in img_name:
+        path_format = path_format.replace("%opid", op.get('id')[2:])
+        path_format = path_format.replace("%opname", op.find(class_="subject").text.replace('/', ' '))
+        if "%name" in path_format:
             try:
-                img_name = img_name.replace("%name", self._name)
+                path_format = path_format.replace("%name", self._name)
             except TypeError:
                 sys.exit("Name must be set (use -n)")
-
-        img_name = img_name + extension
-        return img_name
+        return path_format + extension
 
     def run(self):
         for post in self._soup.find_all(class_='postContainer'):
@@ -97,27 +68,29 @@ class FourchanDL:
 
                 if download_successful:
                     if not self._args.quiet:
-                        print('Downloaded post', post.get('id')[2:], 'as', self.get_img_name(post))
+                        print('Downloaded post', post.get('id')[2:], 'to', self.process_format(post))
                     self._dl_count += 1
                 else:
                     if not self._args.quiet:
-                        print('Skipped post', post.get('id')[2:], '-', self.get_img_name(post))
+                        print('Skipped post', post.get('id')[2:], '-', self.process_format(post))
                     self._skip_count += 1
 
     def download_post(self, post):
-        img_name = self.get_img_name(post)
+        img_path = os.path.expanduser(self.process_format(post))
         img_link = "http:" + post.find(class_="fileThumb").get('href')
+
+        # will make a folder if it doesn't exist
+        os.makedirs('/'.join(img_path.split('/')[:-1]) + '/', exist_ok=True)
 
         # archived posts will have a gif that messes everything up
         if img_link.split('/')[-1] == "archived.gif":
             return False
 
         # download:
-        file_location = os.path.join(self._dl_dir, img_name)
-        if not os.path.exists(file_location):
+        if not os.path.exists(img_path):
             img_get = requests.get(img_link)
             if img_get.ok:
-                with open(file_location, 'wb') as file:
+                with open(img_path, 'wb') as file:
                     file.write(img_get.content)
                 return True
         else:
@@ -125,7 +98,7 @@ class FourchanDL:
 
     def print_stats(self):
         if self._dl_count != 0:
-            print("Downloaded", self._dl_count, "images to", self._dl_dir, "\nSkipped", self._skip_count, "images")
+            print("Downloaded", self._dl_count, "images\nSkipped", self._skip_count, "images")
         elif not self._args.quiet:
             print("Nothing to download\nSkipped", self._skip_count, "images")
 
@@ -149,13 +122,10 @@ def export_config(config):
 
 def get_args():
     parser = argparse.ArgumentParser(description="4chan image downloader")
-    parser.add_argument("-d", "--directory", type=str, help="Directory to save images to")
     parser.add_argument("-f", "--format", type=str, help="File naming")
-    parser.add_argument("-n", "--name", type=str, help="Set the %name variable")
+    parser.add_argument("-n", "--name", type=str, help="Set the name variable")
     parser.add_argument("-q", "--quiet", action=argparse.BooleanOptionalAction, help="Less verbose")
     parser.add_argument("-w", "--watch", type=int, default=0, help="Time between retries. 0 will run the program once")
-    parser.add_argument("--set-default-directory", action=argparse.BooleanOptionalAction,
-                        help="Set the current directory argument as default")
     parser.add_argument("--set-default-format", action=argparse.BooleanOptionalAction,
                         help="Set the current directory format as default")
     parser.add_argument("url", type=str, help="Thread URL")
@@ -166,7 +136,6 @@ def get_args():
 def main():
     args = get_args()
     default_config = {
-        "path": None,
         "format": "%filename"
     }
 

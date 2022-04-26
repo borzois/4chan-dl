@@ -9,9 +9,9 @@ pip install beautifulsoup4 requests
 
 ## Usage
 ```
-python3 ./4chan-dl.py [-h] [-d DIRECTORY] [-f FORMAT] [-n NAME] [-q]
-                   [--set-default-format | --no-set-default-format]
+python3 ./4chan-dl.py [-h] [-d DIRECTORY] [-f FORMAT] [-n NAME] [-q | --quiet | --no-quiet] [-w WATCH]
                    [--set-default-directory | --no-set-default-directory]
+                   [--set-default-format | --no-set-default-format]
                    url
 ```
 
