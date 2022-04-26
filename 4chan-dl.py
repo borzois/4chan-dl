@@ -22,16 +22,24 @@ class FourchanDL:
         self._skip_count = 0
         self._name = args.name
         self._format = self.get_format()
-        # self._dl_dir = self.get_directory()
 
     def prepare_soup(self):
+        """
+        Gets the bs4 object from the url
+        :return: beautifulsoup object of the site
+        :rtype: beautifulsoup
+        """
         html_get = requests.get(self._url)
         if not html_get.ok:
             sys.exit("Invalid url")
         return BeautifulSoup(html_get.text, 'html.parser')
 
     def get_format(self):
-        # format is chosen based on the following order of priorities
+        """
+        Gets the path format according to the priorities
+        :return: path format
+        :rtype: string
+        """
         if self._args.format is not None:
             # 1. -f argument
             form = self._args.format
@@ -44,7 +52,12 @@ class FourchanDL:
         return form
 
     def process_format(self, post):
-        # full path: path / img_name . extension
+        """
+        Performs substitution on the format
+        :return: absolute path of the current image being exported
+        :rtype: string
+        """
+        # get the original file extension
         extension = "." + post.find(class_="fileText").a.text.split('.')[-1]
 
         path_format = self._format
@@ -59,7 +72,8 @@ class FourchanDL:
                 path_format = path_format.replace("%name", self._name)
             except TypeError:
                 sys.exit("Name must be set (use -n)")
-        return path_format + extension
+        path_format = path_format + extension
+        return os.path.expanduser(path_format)
 
     def run(self):
         for post in self._soup.find_all(class_='postContainer'):
@@ -76,7 +90,12 @@ class FourchanDL:
                     self._skip_count += 1
 
     def download_post(self, post):
-        img_path = os.path.expanduser(self.process_format(post))
+        """
+        Downloads an image
+        :return: True if the image was downloaded, False if it already exists
+        :rtype: bool
+        """
+        img_path = self.process_format(post)
         img_link = "http:" + post.find(class_="fileThumb").get('href')
 
         # will make a folder if it doesn't exist
