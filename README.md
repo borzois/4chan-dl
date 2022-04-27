@@ -9,8 +9,7 @@ pip install beautifulsoup4 requests
 
 ## Usage
 ```
-python3 ./4chan-dl.py [-h] [-f FORMAT] [-n NAME] [-q | --quiet | --no-quiet] [-w WATCH]
-                   [--set-default-directory | --no-set-default-directory]
+python3 ./4chan-dl.py [-h] [-f FORMAT] [-n NAME] [-q | --quiet | --no-quiet] [-w SECONDS]
                    [--set-default-format | --no-set-default-format]
                    url
 ```
@@ -25,7 +24,7 @@ The following variables are supported:
 %count     - incremented on each image in the thread
 %name      - user defined variable, set using -n (useful when quickly downloading threads)
 %opid      - the id of the thread
-%opname    - the name of the thread (empty char if none)
+%opsubject - the name of the thread (empty char if none)
 ```
 ### Formatting examples
 #### Creating a default format

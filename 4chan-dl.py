@@ -1,4 +1,5 @@
 #!/usr/bin/python
+import pathlib
 
 from bs4 import BeautifulSoup
 import os.path
@@ -29,6 +30,7 @@ class FourchanDL:
         :return: beautifulsoup object of the site
         :rtype: beautifulsoup
         """
+
         html_get = requests.get(self._url)
         if not html_get.ok:
             sys.exit("Invalid url")
@@ -36,10 +38,11 @@ class FourchanDL:
 
     def get_format(self):
         """
-        Gets the path format according to the priorities
-        :return: path format
+        Gets the output format according to the priorities
+        :return: output format
         :rtype: string
         """
+
         if self._args.format is not None:
             # 1. -f argument
             form = self._args.format
@@ -47,7 +50,7 @@ class FourchanDL:
                 self._config['format'] = self._args.format
                 print("Set", self._args.format, "as default format")
         else:
-            # 2. default directory
+            # 2. default format
             form = self._config['format']
         return form
 
@@ -57,37 +60,33 @@ class FourchanDL:
         :return: absolute path of the current image being exported
         :rtype: string
         """
+
         # get the original file extension
         extension = "." + post.find(class_="fileText").a.text.split('.')[-1]
 
-        path_format = self._format
-        path_format = path_format.replace("%filename", post.find(class_="fileText").a.text.replace(extension, ''))
-        path_format = path_format.replace("%id", post.get('id')[2:])
-        path_format = path_format.replace("%count", str(self._dl_count + self._skip_count + 1))
+        # get some variables
+        post_filename = post.find(class_="fileText").a.text.replace(extension, '')
+        post_id = post.get('id')[2:]
+        post_count = str(self._dl_count + self._skip_count + 1)
         op = self._soup.find(class_='opContainer')
-        path_format = path_format.replace("%opid", op.get('id')[2:])
-        path_format = path_format.replace("%opname", op.find(class_="subject").text.replace('/', ' '))
+        op_id = op.get('id')[2:]
+        op_subject = op.find(class_="subject").text.replace('/', ' ')
+
+        # substitutions
+        path_format = self._format
+        path_format = path_format.replace("%filename", post_filename)
+        path_format = path_format.replace("%id", post_id)
+        path_format = path_format.replace("%count", post_count)
+        path_format = path_format.replace("%opid", op_id)
+        path_format = path_format.replace("%opsubject", op_subject)
         if "%name" in path_format:
             try:
                 path_format = path_format.replace("%name", self._name)
             except TypeError:
                 sys.exit("Name must be set (use -n)")
+
         path_format = path_format + extension
         return os.path.expanduser(path_format)
-
-    def run(self):
-        for post in self._soup.find_all(class_='postContainer'):
-            if post.find('img') is not None:
-                download_successful = self.download_post(post)
-
-                if download_successful:
-                    if not self._args.quiet:
-                        print('Downloaded post', post.get('id')[2:], 'to', self.process_format(post))
-                    self._dl_count += 1
-                else:
-                    if not self._args.quiet:
-                        print('Skipped post', post.get('id')[2:], '-', self.process_format(post))
-                    self._skip_count += 1
 
     def download_post(self, post):
         """
@@ -95,6 +94,7 @@ class FourchanDL:
         :return: True if the image was downloaded, False if it already exists
         :rtype: bool
         """
+
         img_path = self.process_format(post)
         img_link = "http:" + post.find(class_="fileThumb").get('href')
 
@@ -112,8 +112,7 @@ class FourchanDL:
                 with open(img_path, 'wb') as file:
                     file.write(img_get.content)
                 return True
-        else:
-            return False
+        return False
 
     def print_stats(self):
         if self._dl_count != 0:
@@ -121,21 +120,44 @@ class FourchanDL:
         elif not self._args.quiet:
             print("Nothing to download\nSkipped", self._skip_count, "images")
 
+    def run(self):
+        for post in self._soup.find_all(class_='postContainer'):
+            if post.find('img') is not None:
+                download_successful = self.download_post(post)
+                if download_successful:
+                    if not self._args.quiet:
+                        print('Downloaded post', post.get('id')[2:], 'to', self.process_format(post))
+                    self._dl_count += 1
+                else:
+                    if not self._args.quiet:
+                        print('Skipped post', post.get('id')[2:], '-', self.process_format(post))
+                    self._skip_count += 1
+
+
+def get_config_path():
+    if sys.platform == "win32":
+        # untested!
+        return str(pathlib.Path.home()) + "/" + "AppData/Roaming/4chan-dl/"
+    else:
+        return os.path.expanduser("~/.config/4chan-dl/")
+
 
 def load_config():
-    config_path = os.path.expanduser("~/.config/4chan-dl/config.json")
+    config_path = get_config_path()
+    config_file = config_path + "config.json"
     config = {}
-    if os.path.isfile(config_path):
-        with open(config_path, 'r') as file:
+    if os.path.isfile(config_file):
+        with open(config_file, 'r') as file:
             config = json.load(file)
     return config
 
 
 def export_config(config):
-    config_path = os.path.expanduser("~/.config/4chan-dl/config.json")
-    if not os.path.exists(os.path.expanduser("~/.config/4chan-dl/")):
-        os.makedirs(os.path.expanduser("~/.config/4chan-dl/"))
-    with open(config_path, 'w') as file:
+    config_path = get_config_path()
+    config_file = config_path + "config.json"
+    if not os.path.exists(config_path):
+        os.makedirs(config_path)
+    with open(config_file, 'w') as file:
         json.dump(config, file)
 
 
